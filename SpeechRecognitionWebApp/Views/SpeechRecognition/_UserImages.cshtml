@@ -1,0 +1,16 @@
+﻿@model List<SpeechRecognitionWebApp.Db.UserImage>
+
+@foreach (var image in Model)
+{
+    @*string absolutePath = image.ImagePath; // Assuming image.ImagePath contains the absolute file path
+    string virtualPath = absolutePath.Replace(Server.MapPath("~"), "~/").Replace("\\", "/");
+    <div class="image-item">
+        <input type="checkbox" class="image-checkbox" value="@virtualPath" />
+        <img src="@Url.Content(virtualPath)" alt="image" width="250px" class="gallery-image" />
+    </div>*@
+    <div class="image-item">
+        <input type="checkbox" class="image-checkbox" value="@image.ImagePath" />
+        <img src="@Url.Content(image.ImagePath)" alt="image" width="250px" class="gallery-image" />
+    </div>
+
+}

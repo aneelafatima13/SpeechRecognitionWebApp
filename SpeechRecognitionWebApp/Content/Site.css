@@ -1,0 +1,63 @@
+﻿/*.modal-content2 {
+    height: 80vh;*/ /* Set the height to 80% of the viewport height */
+    /*overflow-y: auto;*/ /* Enable vertical scrolling if content overflows */
+/*}*/
+
+.timer {
+    display: none;
+}
+
+.timer-running::before {
+    content: "Recording... ";
+    animation: pulse 1s infinite;
+    display: inline;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+@font-face {
+    font-family: 'Noto Nastaliq Urdu';
+    src: url('~/fonts/NotoNastaliqUrdu-Regular.ttf') format('truetype');
+    /* Add additional font formats if available */
+}
+@font-face {
+    font-family: 'Jameel Noori Nastaleeq';
+    src: url('~/fonts/Jameel Noori Nastaleeq Kasheeda.ttf') format('truetype');
+    /* Add additional font formats if available */
+}
+body {
+    font-family: "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", "Alvi Nastaleeq", sans-serif;
+    padding-top: 50px;
+    padding-bottom: 20px;
+}
+
+/* Set padding to keep content from hitting the edges */
+.body-content {
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+/* Override the default bootstrap behavior where horizontal description lists 
+   will truncate terms that are too long to fit in the left column 
+*/
+.dl-horizontal dt {
+    white-space: normal;
+}
+
+/* Set width on the form input elements since they're 100% wide by default */
+input,
+select,
+textarea {
+    max-width: 280px;
+}

@@ -1,0 +1,404 @@
+﻿
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<br />
+<div>
+    @using (Html.BeginForm(new { enctype = "multipart/form-data", id = "mainForm" }))
+    {
+        <label class="custom-file-label">Choose file</label>
+        <input type="file" id="images" name="images" accept="image/*" multiple>
+        <br />
+        <button type="button" class="btn btn-dark" id="showimages">
+            Choose Images from Gallery
+        </button>
+        <span id="noofselectedfiles"></span>
+        <br />
+        <br />
+        <input type="submit" name="scanType" value="Scan Images into English" class="btn btn-secondary">
+        <input type="submit" name="scanType" value="Scan Images into Urdu" class="btn btn-primary">
+
+        <button type="button" class="btn btn-default" id="saveimages">
+            Save Images to Galary
+        </button>
+    }
+
+    <br />
+    <div id="result"></div>
+    <div id="result" lang="ur" dir="rtl"></div>
+
+    <br />
+    <br />
+    <button onclick="startRecording()" class="btn btn-info">Start Recording</button>
+    <button onclick="stopRecording()" class="btn btn-success">Stop Recording</button>
+    <div id="startMessage"></div>
+
+    <div id="timer" class="timer" style="display: none;">
+        <div class="alert alert-primary" role="alert">
+            <span id="hours" class="mr-1 bold">00</span>h
+            <span id="minutes" class="mr-1">00</span>m
+            <span id="seconds">00</span>s
+        </div>
+    </div>
+    <audio id="beep" src="https://www.soundjay.com/button/beep-01a.mp3" preload="auto"></audio>
+    Button to trigger modal
+    Modal
+    <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title" id="myModalLabel">Login or Register</h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs" style="border-bottom: 2px solid black;">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-toggle="tab" href="#login">Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-toggle="tab" href="#register">Register</a>
+                        </li>
+                    </ul>
+
+
+                    <div class="tab-content">
+                        <div id="login" class="tab-pane active">
+                            @Html.Partial("_Login")
+
+                        </div>
+                        <div id="register" class="tab-pane">
+                            @Html.Partial("_Register")
+
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="galleryModal" tabindex="-1" role="dialog" aria-labelledby="galleryModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content modal-content2">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="galleryModalLabel">Select Images from Gallery</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="galleryImages">
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="selectImagesButton">Select Images</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section scripts{
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/2.2.2/tesseract.min.js"></script>
+
+    <script>
+        function checkLoginStatus() {
+            var lastLogin = localStorage.getItem("user");
+            if (lastLogin) {
+                var lastLoginDate = new Date(lastLogin);
+                var currentDate = new Date();
+                var sevenDaysAgo = new Date(currentDate.getTime() - 7 * 24 * 60 * 60 * 1000); // Seven days ago
+
+                if (lastLoginDate > sevenDaysAgo) {
+                    // User has logged in within the last seven days, don't show login popup
+                    return true;
+                }
+            }
+            // Either no login flag or login was more than seven days ago
+            return false;
+        }
+        var buttonId;
+        $('#showimages, #saveimages').click(function () {
+            buttonId = $(this).attr('id');
+            // Check if the user is already logged in within the last seven days
+            var isLoggedIn = checkLoginStatus();
+
+            // If the user is not logged in or the login status is expired, show the login popup
+            if (!isLoggedIn) {
+                $('#myModal').modal('show');
+            }
+            // If the user is logged in within the last seven days, proceed with the action
+            else {
+
+                if (buttonId === 'showimages') {
+                    openGalleryModal();
+                } else if (buttonId === 'saveimages') {
+                    saveImagesToGallery();
+                }
+            }
+        });
+        function loginUser() {
+
+                var formData = new FormData($('#loginForm')[0]);
+                    $.ajax({
+                        url: '@Url.Action("Login", "SpeechRecognition")',
+                        type: 'POST',
+                        data: formData,
+                        contentType: false,
+                        processData: false,
+                        success: function (response) {
+                            if (response.success) {
+                                if (buttonId === 'showimages') {
+                                    openGalleryModal();
+                                } else if (buttonId === 'saveimages') {
+                                    saveImagesToGallery();
+                                } else {
+                                    console.error('Invalid button ID.');
+                                }
+                                $('#myModal').modal('hide');
+                            } else {
+                                alert('Login failed: ' + response.message);
+                            }
+                        },
+                        error: function () {
+                            alert('Error occurred while logging in.');
+                        }
+                    });
+            // Prevent default form submission behavior
+            return false;
+            }
+
+       function registerUser() {
+            var formData = $('#registerForm').serialize(); // Serialize form data
+            $.ajax({
+                url: '@Url.Action("Register", "SpeechRecognition")', // Replace "YourControllerName" with your actual controller name
+                type: 'POST',
+                data: formData,
+                success: function (response) {
+
+                    // Handle success response
+                    console.log(response);
+                    // Optionally, update the UI or redirect to another page
+                },
+                error: function () {
+                    // Handle error
+                    alert('Error occurred while registering.');
+                }
+            });
+        }
+
+        $(document).ready(function () {
+
+            // Function to handle image selection
+            $('#selectImagesButton').click(function () {
+                // Array to store selected image paths
+                var selectedImages = [];
+
+                // Loop through each checkbox to check if it's checked
+                $('.image-checkbox').each(function () {
+                    if ($(this).is(':checked')) {
+                        // If checked, add the image path to the selectedImages array
+                        selectedImages.push($(this).val());
+                    }
+                });
+
+                // Display the number of selected files in the span with id 'noofselectedfiles'
+                $('#noofselectedfiles').text(selectedImages.length + " files selected");
+
+                // Do whatever you want with the selected images, for example, log them to console
+                console.log(selectedImages);
+
+                // Close the modal
+                $('#galleryModal').modal('hide');
+            });
+        });
+
+        function openGalleryModal() {
+            $.ajax({
+                url: '/SpeechRecognition/GetUserImages', // Replace with your controller action
+                type: 'GET',
+                success: function (response) {
+                    // Populate modal with images
+                    $('#galleryImages').html(response);
+                    $('#myModal').modal('hide');
+                    $('#galleryModal').modal('show');
+                },
+                error: function (xhr, status, error) {
+                    console.error(xhr.responseText);
+                }
+            });
+        }
+
+
+     function saveImagesToGallery() {
+         var formData = new FormData();
+         var files = $('#images')[0].files;
+         for (var i = 0; i < files.length; i++) {
+             formData.append('images[]', files[i]);
+         }
+         console.log("files:", files)
+         console.log("formdata:",formData)
+        $.ajax({
+            url: '@Url.Action("SaveImagesToGallery", "SpeechRecognition")',
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function (response) {
+                alert('Images saved successfully.');
+                // Handle success response as needed
+            },
+            error: function () {
+                alert('Error occurred while saving images.');
+            }
+        });
+        }
+
+
+
+        /*var isLoggedIn = checkLoginStatus();*/
+        // Check if the user is already authenticated with cookies
+@*var isAuthenticated = @(User.Identity.IsAuthenticated ? "true" : "false");*@
+
+// Only attach click event handlers if the user is not already authenticated
+//        if (!isLoggedIn) {
+    //$('#showimages, #saveimages').click(function () {
+    //    modalTriggerButton = $(this).attr('id');
+    //});
+//}
+
+// Function to handle login action
+
+
+        $('#switchToRegister').click(function () {
+            $('#login').removeClass('active');
+            $('#register').addClass('active');
+        });
+
+   $(function () {
+    // Add click event handlers to the scan buttons
+    $('input[name="scanType"]').click(function (e) {
+        e.preventDefault(); // Prevent default form submission
+
+        // Get the value of the clicked button (English or Urdu)
+        var scanType = $(this).val();
+
+        // Create a new FormData object
+        var formData = new FormData($('#mainForm')[0]);
+
+        // Append the selected scan type to the FormData object
+        formData.append('scanType', scanType);
+
+        // Check if files are selected
+        var files = $('#images')[0].files;
+        if (files.length === 0) {
+            alert('Please select at least one image.');
+            return;
+        }
+
+        // Append the files to the FormData object
+        for (var i = 0; i < files.length; i++) {
+            formData.append('images', files[i]);
+        }
+
+        // Perform AJAX request
+        $.ajax({
+            url: '@Url.Action("UploadImage", "SpeechRecognition")',
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function (data) {
+                $('#result').text(data);
+            },
+            error: function () {
+                alert('Error occurred while processing the image.');
+            }
+        });
+    });
+});
+
+
+    /*var recognition = new webkitSpeechRecognition();*/
+    var recognition;
+
+    try {
+    recognition = new webkitSpeechRecognition();
+    } catch (e) {
+    console.error("Speech recognition initialization error:", e);
+    }
+
+    if (!recognition) {
+    console.error("Speech recognition object not initialized.");
+    } else {
+    console.log("Speech recognition object initialized successfully.");
+    }
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    var timerRunning = false;
+    var startTime;
+    var timerInterval;
+
+    recognition.onstart = function () {
+    if (!timerRunning) {
+    startTime = new Date().getTime();
+    timerInterval = setInterval(updateTimer, 1000);
+    timerRunning = true;
+    }
+
+    document.getElementById('timer').style.display = 'block'; // Show timer
+    }
+
+    recognition.onend = function () {
+    clearInterval(timerInterval);
+    timerRunning = false;
+
+    }
+
+    recognition.onresult = function (event) {
+        var result = event.results[event.results.length - 1][0].transcript;
+
+        // Compare audio with text and produce beep sound for any mismatch
+        var text = document.getElementById('result').innerText.toLowerCase();
+        var audioText = result.toLowerCase();
+        var textWords = text.split(' ');
+        var audioWords = audioText.split(' ');
+
+        for (var i = 0; i < audioWords.length; i++) {
+            if (audioWords[i] !== textWords[i]) {
+                document.getElementById('beep').play();
+                break;
+            }
+        }
+    }
+
+    function startRecording() {
+    recognition.start();
+    $('#startMessage').text('Recording has started').css('color', 'green');
+    }
+
+    function stopRecording() {
+    recognition.stop();
+    $('#startMessage').text('Recording has stopped').css('color', 'red');
+    }
+
+    function updateTimer() {
+    var currentTime = new Date().getTime();
+    var elapsedTime = currentTime - startTime;
+    var hours = Math.floor(elapsedTime / (1000 * 60 * 60));
+    var minutes = Math.floor((elapsedTime % (1000 * 60 * 60)) / (1000 * 60));
+    var seconds = Math.floor((elapsedTime % (1000 * 60)) / 1000);
+    document.getElementById('hours').innerText = pad(hours);
+    document.getElementById('minutes').innerText = pad(minutes);
+    document.getElementById('seconds').innerText = pad(seconds);
+    }
+
+    function pad(num) {
+    return (num < 10 ? '0' : '') + num;
+    }
+    </script>
+
+}
