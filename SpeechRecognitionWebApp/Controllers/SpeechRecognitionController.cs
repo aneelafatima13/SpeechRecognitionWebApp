@@ -78,46 +78,6 @@ namespace SpeechRecognitionWebApp.Controllers
             return text;
         }
 
-        //public ActionResult UploadImage(IEnumerable<HttpPostedFileBase> images, string scanType)
-        //{
-        //    if (images == null || !images.Any() || images.All(f => f == null || f.ContentLength == 0))
-        //        return Content("No files uploaded.");
-
-        //    string allText = "";
-
-        //    string language = "eng";
-        //    if (scanType == "Scan Images into Urdu")
-        //    {
-        //        language = "urd";
-        //    }
-
-        //    foreach (var file in images)
-        //    {
-        //        if (file != null && file.ContentLength > 0)
-        //        {
-        //            using (var memoryStream = new MemoryStream())
-        //            {
-        //                file.InputStream.CopyTo(memoryStream);
-        //                using (var engine = new TesseractEngine(Server.MapPath(@"~/tessdata"), language, EngineMode.Default))
-        //                {
-        //                    using (var img = Pix.LoadFromMemory(memoryStream.ToArray()))
-        //                    {
-        //                        using (var page = engine.Process(img))
-        //                        {
-        //                            byte[] utf8Bytes = Encoding.UTF8.GetBytes(page.GetText());
-        //                            string utf8Text = Encoding.UTF8.GetString(utf8Bytes);
-
-        //                            allText += utf8Text;
-        //                        }
-        //                    }
-        //                }
-        //            }
-        //        }
-        //    }
-
-        //    return Content(allText);
-        //}
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public ActionResult Register(UsersInfo model)

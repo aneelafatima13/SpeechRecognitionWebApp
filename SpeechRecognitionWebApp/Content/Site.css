@@ -2,7 +2,9 @@
     height: 80vh;*/ /* Set the height to 80% of the viewport height */
     /*overflow-y: auto;*/ /* Enable vertical scrolling if content overflows */
 /*}*/
-
+.custom-btn {
+    margin-bottom: 2px; /* Adjust the value to set the desired distance */
+}
 .timer {
     display: none;
 }
