@@ -19,15 +19,11 @@
                 @Html.ActionLink("Application name", "Index", "SpeechRecognition", new { area = "" }, new { @class = "navbar-brand" })
             </div>
             <div class="navbar-collapse collapse">
-                @*<ul class="nav navbar-nav">
-            <li>@Html.ActionLink("Home", "Index", "Home")</li>
-            <li>@Html.ActionLink("About", "About", "Home")</li>
-            <li>@Html.ActionLink("Contact", "Contact", "Home")</li>
-        </ul>*@
-                @if (User.Identity.IsAuthenticated)
+                @if (Request.Cookies["User"] != null)
                 {
+                    var username = Request.Cookies["User"]["username"];
                     <ul class="nav navbar-nav navbar-right">
-                        <li><p class="navbar-text">@User.Identity.Name</p></li>
+                        <li class="navbar-text">@*<p class="navbar-text">*@@username@*</p>*@</li>
                         <li>
                             <form class="navbar-form navbar-left" action="@Url.Action("Logout", "SpeechRecognition")" method="post">
                                 @Html.AntiForgeryToken()
@@ -37,6 +33,7 @@
                     </ul>
                 }
             </div>
+
         </div>
     </div>
     <div class="container body-content">

@@ -1,4 +1,5 @@
-﻿using SpeechRecognitionWebApp.Db;
+﻿using Microsoft.OData.Edm;
+using SpeechRecognitionWebApp.Db;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -19,45 +20,103 @@ namespace SpeechRecognitionWebApp.Controllers
             return View();
         }
 
-        public ActionResult UploadImage(IEnumerable<HttpPostedFileBase> images, string scanType)
+        [HttpPost]
+        public ActionResult UploadImage(IEnumerable<HttpPostedFileBase> images, string scanType, string[] selectedImagePaths)
         {
-            if (images == null || !images.Any() || images.All(f => f == null || f.ContentLength == 0))
+            if ((images == null || !images.Any() || images.All(f => f == null || f.ContentLength == 0)) && (selectedImagePaths == null || selectedImagePaths.Length == 0))
                 return Content("No files uploaded.");
 
             string allText = "";
+            string language = scanType == "Scan Images into Urdu" ? "urd" : "eng";
 
-            string language = "eng";
-            if (scanType == "Scan Images into Urdu")
+            // Process uploaded images
+            if (images != null)
             {
-                language = "urd";
+                foreach (var file in images)
+                {
+                    if (file != null && file.ContentLength > 0)
+                    {
+                        allText += ProcessImage(file.InputStream, language);
+                    }
+                }
             }
 
-            foreach (var file in images)
+            // Process selected images from gallery
+            if (selectedImagePaths != null)
             {
-                if (file != null && file.ContentLength > 0)
+                foreach (var path in selectedImagePaths)
                 {
-                    using (var memoryStream = new MemoryStream())
+                    string fullPath = Server.MapPath(path);
+                    using (var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read))
                     {
-                        file.InputStream.CopyTo(memoryStream);
-                        using (var engine = new TesseractEngine(Server.MapPath(@"~/tessdata"), language, EngineMode.Default))
-                        {
-                            using (var img = Pix.LoadFromMemory(memoryStream.ToArray()))
-                            {
-                                using (var page = engine.Process(img))
-                                {
-                                    byte[] utf8Bytes = Encoding.UTF8.GetBytes(page.GetText());
-                                    string utf8Text = Encoding.UTF8.GetString(utf8Bytes);
-
-                                    allText += utf8Text;
-                                }
-                            }
-                        }
+                        allText += ProcessImage(stream, language);
                     }
                 }
             }
 
             return Content(allText);
         }
+
+        private string ProcessImage(Stream stream, string language)
+        {
+            string text = "";
+            using (var memoryStream = new MemoryStream())
+            {
+                stream.CopyTo(memoryStream);
+                using (var engine = new TesseractEngine(Server.MapPath(@"~/tessdata"), language, EngineMode.Default))
+                {
+                    using (var img = Pix.LoadFromMemory(memoryStream.ToArray()))
+                    {
+                        using (var page = engine.Process(img))
+                        {
+                            byte[] utf8Bytes = Encoding.UTF8.GetBytes(page.GetText());
+                            text = Encoding.UTF8.GetString(utf8Bytes);
+                        }
+                    }
+                }
+            }
+            return text;
+        }
+
+        //public ActionResult UploadImage(IEnumerable<HttpPostedFileBase> images, string scanType)
+        //{
+        //    if (images == null || !images.Any() || images.All(f => f == null || f.ContentLength == 0))
+        //        return Content("No files uploaded.");
+
+        //    string allText = "";
+
+        //    string language = "eng";
+        //    if (scanType == "Scan Images into Urdu")
+        //    {
+        //        language = "urd";
+        //    }
+
+        //    foreach (var file in images)
+        //    {
+        //        if (file != null && file.ContentLength > 0)
+        //        {
+        //            using (var memoryStream = new MemoryStream())
+        //            {
+        //                file.InputStream.CopyTo(memoryStream);
+        //                using (var engine = new TesseractEngine(Server.MapPath(@"~/tessdata"), language, EngineMode.Default))
+        //                {
+        //                    using (var img = Pix.LoadFromMemory(memoryStream.ToArray()))
+        //                    {
+        //                        using (var page = engine.Process(img))
+        //                        {
+        //                            byte[] utf8Bytes = Encoding.UTF8.GetBytes(page.GetText());
+        //                            string utf8Text = Encoding.UTF8.GetString(utf8Bytes);
+
+        //                            allText += utf8Text;
+        //                        }
+        //                    }
+        //                }
+        //            }
+        //        }
+        //    }
+
+        //    return Content(allText);
+        //}
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -80,25 +139,31 @@ namespace SpeechRecognitionWebApp.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Login(UsersInfo model)
         {
-            
             var user = db.UsersInfoes.FirstOrDefault(u => u.UserName == model.UserName && u.UserPassword == model.UserPassword);
+
             if (user != null)
             {
+                // Create and set authentication cookie
                 HttpCookie cookie = new HttpCookie("User");
                 cookie["username"] = model.UserName;
                 cookie["password"] = model.UserPassword;
                 cookie.Expires = DateTime.Now.AddDays(15);
                 HttpContext.Response.Cookies.Add(cookie);
+                //object localStorage = null;
+                //localStorage.setItem("User", new Date().toISOString());
+                //// Set session variable
+                //Session["UserId"] = user.UserId;
 
-                Session["UserId"] = user.UserId;
-                return Json(new { });
+                // Return success JSON response
+                return Json(new { success = true });
             }
             else
             {
-                ModelState.AddModelError("", "Invalid username or password.");
-                return View(model);
+                // Return failure JSON response with error message
+                return Json(new { success = false, message = "Invalid username or password." });
             }
         }
+
 
 
         [HttpPost]
@@ -106,14 +171,34 @@ namespace SpeechRecognitionWebApp.Controllers
         {
             try
             {
-                int? userId = Session["UserId"] as int?;
+                int? userId = null;
+
+                // Check if the "User" cookie exists
+                if (Request.Cookies["User"] != null)
+                {
+                    string username = Request.Cookies["User"]["username"];
+                    string password = Request.Cookies["User"]["password"];
+
+                    // Authenticate the user based on the cookie
+                    var user = db.UsersInfoes.FirstOrDefault(u => u.UserName == username && u.UserPassword == password);
+                    if (user != null)
+                    {
+                        // User authenticated successfully, retrieve user ID
+                        userId = user.UserId;
+                    }
+                }
                 if (userId == null)
                 {
                     // Handle case where user is not authenticated
-                    return RedirectToAction("Login");
+                    return RedirectToAction("Index");
                 }
                 // Get the files from the request
                 HttpFileCollectionBase files = Request.Files;
+                if (files == null || files.Count == 0)
+                {
+                    return Json(new { success = false, message = "No image selected to save." });
+                }
+
                 List<string> fileNames = new List<string>();
 
                 // Loop through each file
@@ -164,10 +249,26 @@ namespace SpeechRecognitionWebApp.Controllers
         public ActionResult GetUserImages()
         {
             // Get the logged-in user's ID
-            int? userId = Session["UserId"] as int?;
+            //int? userId = Session["UserId"] as int?;
+            int? userId = null;
+
+            // Check if the "User" cookie exists
+            if (Request.Cookies["User"] != null)
+            {
+                string username = Request.Cookies["User"]["username"];
+                string password = Request.Cookies["User"]["password"];
+
+                // Authenticate the user based on the cookie
+                var user = db.UsersInfoes.FirstOrDefault(u => u.UserName == username && u.UserPassword == password);
+                if (user != null)
+                {
+                    // User authenticated successfully, retrieve user ID
+                    userId = user.UserId;
+                }
+            }
             if (userId == null)
             {
-                return RedirectToAction("Login");
+                return RedirectToAction("Index");
             }
 
             var userImages = db.UserImages.Where(ui => ui.UserId == userId).ToList();
@@ -180,9 +281,20 @@ namespace SpeechRecognitionWebApp.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Logout()
         {
+            // Remove the authentication cookie
+            if (Request.Cookies["User"] != null)
+            {
+                HttpCookie cookie = new HttpCookie("User");
+                cookie.Expires = DateTime.Now.AddDays(-1); // Set the cookie's expiration date to the past
+                HttpContext.Response.Cookies.Add(cookie);
+            }
+
+            // Sign out from forms authentication
             FormsAuthentication.SignOut();
 
+            // Redirect to the home page or login page
             return RedirectToAction("Index");
         }
+
     }
 }

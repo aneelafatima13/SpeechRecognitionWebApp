@@ -7,6 +7,7 @@
 <div>
     @using (Html.BeginForm(new { enctype = "multipart/form-data", id = "mainForm" }))
     {
+        <br />
         <label class="custom-file-label">Choose file</label>
         <input type="file" id="images" name="images" accept="image/*" multiple>
         <br />
@@ -14,6 +15,7 @@
             Choose Images from Gallery
         </button>
         <span id="noofselectedfiles"></span>
+        <input type="hidden" id="selectedImages" name="selectedImages" />
         <br />
         <br />
         <input type="submit" name="scanType" value="Scan Images into English" class="btn btn-secondary">
@@ -42,8 +44,7 @@
         </div>
     </div>
     <audio id="beep" src="https://www.soundjay.com/button/beep-01a.mp3" preload="auto"></audio>
-    Button to trigger modal
-    Modal
+
     <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
@@ -105,70 +106,65 @@
 
     <script>
         function checkLoginStatus() {
-            var lastLogin = localStorage.getItem("user");
-            if (lastLogin) {
-                var lastLoginDate = new Date(lastLogin);
-                var currentDate = new Date();
-                var sevenDaysAgo = new Date(currentDate.getTime() - 7 * 24 * 60 * 60 * 1000); // Seven days ago
-
-                if (lastLoginDate > sevenDaysAgo) {
-                    // User has logged in within the last seven days, don't show login popup
+            var userCookie = document.cookie.split('; ').find(row => row.startsWith('User='));
+            if (userCookie) {
+                var cookieValue = userCookie.split('=')[1];
+                if (cookieValue) {
                     return true;
                 }
             }
-            // Either no login flag or login was more than seven days ago
             return false;
         }
+
         var buttonId;
         $('#showimages, #saveimages').click(function () {
             buttonId = $(this).attr('id');
-            // Check if the user is already logged in within the last seven days
             var isLoggedIn = checkLoginStatus();
-
-            // If the user is not logged in or the login status is expired, show the login popup
-            if (!isLoggedIn) {
-                $('#myModal').modal('show');
-            }
-            // If the user is logged in within the last seven days, proceed with the action
-            else {
-
+            // Check if the user is logged in
+            if (isLoggedIn) {
+                // If logged in, directly execute the corresponding function
                 if (buttonId === 'showimages') {
                     openGalleryModal();
                 } else if (buttonId === 'saveimages') {
                     saveImagesToGallery();
                 }
+            } else {
+                // If not logged in, show the login modal
+                $('#myModal').modal('show');
             }
         });
-        function loginUser() {
 
-                var formData = new FormData($('#loginForm')[0]);
-                    $.ajax({
-                        url: '@Url.Action("Login", "SpeechRecognition")',
-                        type: 'POST',
-                        data: formData,
-                        contentType: false,
-                        processData: false,
-                        success: function (response) {
-                            if (response.success) {
-                                if (buttonId === 'showimages') {
-                                    openGalleryModal();
-                                } else if (buttonId === 'saveimages') {
-                                    saveImagesToGallery();
-                                } else {
-                                    console.error('Invalid button ID.');
-                                }
-                                $('#myModal').modal('hide');
-                            } else {
-                                alert('Login failed: ' + response.message);
-                            }
-                        },
-                        error: function () {
-                            alert('Error occurred while logging in.');
-                        }
-                    });
-            // Prevent default form submission behavior
-            return false;
+       function loginUser() {
+    var formData = new FormData($('#loginForm')[0]);
+
+    $.ajax({
+        url: '@Url.Action("Login", "SpeechRecognition")',
+        type: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+        success: function (response) {
+            if (response.success) {
+                if (buttonId === 'showimages') {
+                    openGalleryModal();
+                } else if (buttonId === 'saveimages') {
+                    saveImagesToGallery();
+                } else {
+                    console.error('Invalid button ID.');
+                }
+                $('#myModal').modal('hide');
+            } else {
+                alert('Login failed: ' + response.message);
             }
+        },
+        error: function () {
+            alert('Error occurred while logging in.');
+        }
+    });
+
+    // Prevent default form submission behavior
+    return false;
+}
 
        function registerUser() {
             var formData = $('#registerForm').serialize(); // Serialize form data
@@ -203,7 +199,9 @@
                         selectedImages.push($(this).val());
                     }
                 });
-
+                $('#selectedImages').val(selectedImages.join(','));
+                
+                console.log("Hidden Input Value:", $('#selectedImages').val());
                 // Display the number of selected files in the span with id 'noofselectedfiles'
                 $('#noofselectedfiles').text(selectedImages.length + " files selected");
 
@@ -213,6 +211,62 @@
                 // Close the modal
                 $('#galleryModal').modal('hide');
             });
+
+            $('input[name="scanType"]').click(function (e) {
+        e.preventDefault(); // Prevent default form submission
+
+        // Get the value of the clicked button (English or Urdu)
+        var scanType = $(this).val();
+
+        // Create a new FormData object
+        var formData = new FormData($('#mainForm')[0]);
+
+        // Append the selected scan type to the FormData object
+        formData.append('scanType', scanType);
+
+        // Check if files are selected from input or images are selected from the gallery
+        var files = $('#images')[0].files;
+       /* var selectedImages = [];*/
+
+        // If files are selected from input, append them to FormData
+        for (var i = 0; i < files.length; i++) {
+            formData.append('images', files[i]);
+        }
+
+                var selectedImages = $('#selectedImages').val().split(',');
+
+                // Debugging: log the selected images
+                console.log("selected Images:", selectedImages);
+
+                // Append selected gallery images to FormData
+                $.each(selectedImages, function (index, value) {
+                    if (value) { // Ensure value is not empty
+                        formData.append('selectedImagePaths[]', value);
+                        console.log("Appended Image:", value); // Log each appended image
+                    }
+                });
+
+        // Check if no files or images selected
+        if (files.length === 0 && selectedImages.length === 0) {
+            alert('Please select at least one image.');
+            return;
+        }
+
+        // Perform AJAX request
+        $.ajax({
+            url: '@Url.Action("UploadImage", "SpeechRecognition")',
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function (data) {
+                $('#result').text(data);
+            },
+            error: function () {
+                alert('Error occurred while processing the images.');
+            }
+        });
+    });
         });
 
         function openGalleryModal() {
@@ -235,6 +289,10 @@
      function saveImagesToGallery() {
          var formData = new FormData();
          var files = $('#images')[0].files;
+         if (files.length === 0) {
+             alert('No image selected to save.');
+             return;
+         }
          for (var i = 0; i < files.length; i++) {
              formData.append('images[]', files[i]);
          }
@@ -256,28 +314,16 @@
         });
         }
 
-
-
-        /*var isLoggedIn = checkLoginStatus();*/
-        // Check if the user is already authenticated with cookies
-@*var isAuthenticated = @(User.Identity.IsAuthenticated ? "true" : "false");*@
-
-// Only attach click event handlers if the user is not already authenticated
-//        if (!isLoggedIn) {
-    //$('#showimages, #saveimages').click(function () {
-    //    modalTriggerButton = $(this).attr('id');
-    //});
-//}
-
-// Function to handle login action
-
-
         $('#switchToRegister').click(function () {
             $('#login').removeClass('active');
             $('#register').addClass('active');
         });
+       /* $(function () {*/
+    // Add click event handlers to the scan buttons
 
-   $(function () {
+/*});*/
+
+   @*$(function () {
     // Add click event handlers to the scan buttons
     $('input[name="scanType"]').click(function (e) {
         e.preventDefault(); // Prevent default form submission
@@ -318,7 +364,7 @@
             }
         });
     });
-});
+});*@
 
 
     /*var recognition = new webkitSpeechRecognition();*/
