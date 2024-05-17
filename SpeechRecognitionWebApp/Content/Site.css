@@ -2,6 +2,11 @@
     height: 80vh;*/ /* Set the height to 80% of the viewport height */
     /*overflow-y: auto;*/ /* Enable vertical scrolling if content overflows */
 /*}*/
+.mismatch {
+    background - color: yellow;
+    font-weight: bold;
+}
+
 .custom-btn {
     margin-bottom: 2px; /* Adjust the value to set the desired distance */
 }
