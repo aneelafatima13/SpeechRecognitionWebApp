@@ -9,8 +9,11 @@
         <img src="@Url.Content(virtualPath)" alt="image" width="250px" class="gallery-image" />
     </div>*@
     <div class="image-item">
-        <input type="checkbox" class="image-checkbox" value="@image.ImagePath" />
-        <img src="@Url.Content(image.ImagePath)" alt="image" width="250px" class="gallery-image" />
+        <label>
+            <input type="checkbox" class="image-checkbox" value="@image.ImagePath" />
+            <img src="@Url.Content(image.ImagePath)" alt="image" width="250px" class="gallery-image" />
+            <div class="checked-overlay"></div>
+        </label>
     </div>
 
 }

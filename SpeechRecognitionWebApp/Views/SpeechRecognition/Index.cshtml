@@ -49,7 +49,7 @@
             </div>
 
             <div class="col-sm-6">
-                <div class="panel panel-default" id="scannedTextPanel" style="max-height: 300px; overflow: auto;">
+                <div class="panel panel-default" id="scannedTextPanel" style="height: 300px; overflow: auto;">
                     <div class="panel-heading">
                         <h3 class="panel-title">Scanned Text Result</h3>
                     </div>
@@ -152,151 +152,123 @@
         $('#showimages, #saveimages').click(function () {
             buttonId = $(this).attr('id');
             var isLoggedIn = checkLoginStatus();
-            // Check if the user is logged in
+
             if (isLoggedIn) {
-                // If logged in, directly execute the corresponding function
+
                 if (buttonId === 'showimages') {
                     openGalleryModal();
                 } else if (buttonId === 'saveimages') {
                     saveImagesToGallery();
                 }
             } else {
-                // If not logged in, show the login modal
+
                 $('#myModal').modal('show');
             }
         });
 
        function loginUser() {
-    var formData = new FormData($('#loginForm')[0]);
+            var formData = new FormData($('#loginForm')[0]);
 
-    $.ajax({
-        url: '@Url.Action("Login", "SpeechRecognition")',
-        type: 'POST',
-        data: formData,
-        contentType: false,
-        processData: false,
-        success: function (response) {
-            if (response.success) {
-                if (buttonId === 'showimages') {
-                    openGalleryModal();
-                } else if (buttonId === 'saveimages') {
-                    saveImagesToGallery();
-                } else {
-                    console.error('Invalid button ID.');
+            $.ajax({
+                url: '@Url.Action("Login", "SpeechRecognition")',
+                type: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function (response) {
+                    if (response.success) {
+                        if (buttonId === 'showimages') {
+                            openGalleryModal();
+                        } else if (buttonId === 'saveimages') {
+                            saveImagesToGallery();
+                        } else {
+                            console.error('Invalid button ID.');
+                        }
+                        $('#myModal').modal('hide');
+                    } else {
+                        alert('Login failed: ' + response.message);
+                    }
+                },
+                error: function () {
+                    alert('Error occurred while logging in.');
                 }
-                $('#myModal').modal('hide');
-            } else {
-                alert('Login failed: ' + response.message);
-            }
-        },
-        error: function () {
-            alert('Error occurred while logging in.');
-        }
-    });
+            });
 
-    // Prevent default form submission behavior
-    return false;
-}
+
+            return false;
+        }
 
        function registerUser() {
-            var formData = $('#registerForm').serialize(); // Serialize form data
+            var formData = $('#registerForm').serialize();
             $.ajax({
-                url: '@Url.Action("Register", "SpeechRecognition")', // Replace "YourControllerName" with your actual controller name
+                url: '@Url.Action("Register", "SpeechRecognition")',
                 type: 'POST',
                 data: formData,
                 success: function (response) {
-
-                    // Handle success response
-                    console.log(response);
-                    // Optionally, update the UI or redirect to another page
+                    if (response.success) {
+                        if (buttonId === 'showimages') {
+                            openGalleryModal();
+                        } else if (buttonId === 'saveimages') {
+                            saveImagesToGallery();
+                        } else {
+                            console.error('Invalid button ID.');
+                        }
+                        $('#myModal').modal('hide');
+                    }
                 },
                 error: function () {
-                    // Handle error
+
                     alert('Error occurred while registering.');
                 }
             });
         }
 
         $(document).ready(function () {
-            // Get the panel and its body
-            var scannedTextPanel = document.getElementById("scannedTextPanel");
-            var scannedTextBody = document.getElementById("scannedTextBody");
 
-            // Set the initial fixed height
-            scannedTextPanel.style.height = "300px";
-
-            // Check if the content height exceeds the fixed height
-            if (scannedTextBody.scrollHeight > scannedTextPanel.clientHeight) {
-                // If content exceeds, set the panel's height to match the content height
-                scannedTextPanel.style.height = scannedTextBody.scrollHeight + "px";
-            }
-
-            // Function to handle image selection
             $('#selectImagesButton').click(function () {
-                // Array to store selected image paths
+
                 var selectedImages = [];
 
-                // Loop through each checkbox to check if it's checked
                 $('.image-checkbox').each(function () {
                     if ($(this).is(':checked')) {
-                        // If checked, add the image path to the selectedImages array
+
                         selectedImages.push($(this).val());
                     }
                 });
                 $('#selectedImages').val(selectedImages.join(','));
-                
+
                 console.log("Hidden Input Value:", $('#selectedImages').val());
-                // Display the number of selected files in the span with id 'noofselectedfiles'
+
                 $('#noofselectedfiles').text(selectedImages.length + " files selected");
 
-                // Do whatever you want with the selected images, for example, log them to console
+
                 console.log(selectedImages);
 
-                // Close the modal
+
                 $('#galleryModal').modal('hide');
             });
 
-            $('input[name="scanType"]').click(function (e) {
-        e.preventDefault(); // Prevent default form submission
-
-        // Get the value of the clicked button (English or Urdu)
+    $('input[name="scanType"]').click(function (e) {
+        e.preventDefault();
         var scanType = $(this).val();
-
-        // Create a new FormData object
         var formData = new FormData($('#mainForm')[0]);
-
-        // Append the selected scan type to the FormData object
         formData.append('scanType', scanType);
-
-        // Check if files are selected from input or images are selected from the gallery
         var files = $('#images')[0].files;
-       /* var selectedImages = [];*/
-
-        // If files are selected from input, append them to FormData
         for (var i = 0; i < files.length; i++) {
             formData.append('images', files[i]);
         }
-
-                var selectedImages = $('#selectedImages').val().split(',');
-
-                // Debugging: log the selected images
-                console.log("selected Images:", selectedImages);
-
-                // Append selected gallery images to FormData
-                $.each(selectedImages, function (index, value) {
-                    if (value) { // Ensure value is not empty
-                        formData.append('selectedImagePaths[]', value);
-                        console.log("Appended Image:", value); // Log each appended image
-                    }
-                });
-
-        // Check if no files or images selected
+        var selectedImages = $('#selectedImages').val().split(',');
+        console.log("selected Images:", selectedImages);
+        $.each(selectedImages, function (index, value) {
+             if (value) {
+                  formData.append('selectedImagePaths[]', value);
+                  console.log("Appended Image:", value);
+             }
+        });
         if (files.length === 0 && selectedImages.length === 0) {
             alert('Please select at least one image.');
             return;
         }
-
-        // Perform AJAX request
         $.ajax({
             url: '@Url.Action("UploadImage", "SpeechRecognition")',
             type: 'POST',
@@ -315,10 +287,10 @@
 
         function openGalleryModal() {
             $.ajax({
-                url: '/SpeechRecognition/GetUserImages', // Replace with your controller action
+                url: '/SpeechRecognition/GetUserImages',
                 type: 'GET',
                 success: function (response) {
-                    // Populate modal with images
+
                     $('#galleryImages').html(response);
                     $('#myModal').modal('hide');
                     $('#galleryModal').modal('show');
@@ -350,32 +322,31 @@
             processData: false,
             success: function (response) {
                 alert('Images saved successfully.');
-                // Handle success response as needed
+
             },
             error: function () {
                 alert('Error occurred while saving images.');
             }
         });
-        }
+     }
 
         $('#switchToRegister').click(function () {
             $('#login').removeClass('active');
             $('#register').addClass('active');
         });
-      
-    /*var recognition = new webkitSpeechRecognition();*/
+
     var recognition;
 
     try {
-    recognition = new webkitSpeechRecognition();
+        recognition = new webkitSpeechRecognition();
     } catch (e) {
-    console.error("Speech recognition initialization error:", e);
+        console.error("Speech recognition initialization error:", e);
     }
 
     if (!recognition) {
-    console.error("Speech recognition object not initialized.");
+        console.error("Speech recognition object not initialized.");
     } else {
-    console.log("Speech recognition object initialized successfully.");
+        console.log("Speech recognition object initialized successfully.");
     }
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -385,25 +356,24 @@
     var timerInterval;
 
     recognition.onstart = function () {
-    if (!timerRunning) {
-    startTime = new Date().getTime();
-    timerInterval = setInterval(updateTimer, 1000);
-    timerRunning = true;
-    }
+        if (!timerRunning) {
+            startTime = new Date().getTime();
+            timerInterval = setInterval(updateTimer, 1000);
+            timerRunning = true;
+        }
 
-    document.getElementById('timer').style.display = 'block'; // Show timer
+        document.getElementById('timer').style.display = 'block';
     }
 
     recognition.onend = function () {
-    clearInterval(timerInterval);
-    timerRunning = false;
+        clearInterval(timerInterval);
+        timerRunning = false;
 
     }
 
         recognition.onresult = function (event) {
             var result = event.results[event.results.length - 1][0].transcript;
 
-            // Compare audio with text and produce beep sound for any mismatch
             var text = document.getElementById('result').innerText.toLowerCase();
             var audioText = result.toLowerCase();
             var textWords = text.split(' ');
@@ -427,28 +397,28 @@
 
 
     function startRecording() {
-    recognition.start();
-    $('#startMessage').text('Recording has started').css('color', 'green');
+        recognition.start();
+        $('#startMessage').text('Recording has started').css('color', 'green');
     }
 
     function stopRecording() {
-    recognition.stop();
-    $('#startMessage').text('Recording has stopped').css('color', 'red');
+        recognition.stop();
+        $('#startMessage').text('Recording has stopped').css('color', 'red');
     }
 
     function updateTimer() {
-    var currentTime = new Date().getTime();
-    var elapsedTime = currentTime - startTime;
-    var hours = Math.floor(elapsedTime / (1000 * 60 * 60));
-    var minutes = Math.floor((elapsedTime % (1000 * 60 * 60)) / (1000 * 60));
-    var seconds = Math.floor((elapsedTime % (1000 * 60)) / 1000);
-    document.getElementById('hours').innerText = pad(hours);
-    document.getElementById('minutes').innerText = pad(minutes);
-    document.getElementById('seconds').innerText = pad(seconds);
+        var currentTime = new Date().getTime();
+        var elapsedTime = currentTime - startTime;
+        var hours = Math.floor(elapsedTime / (1000 * 60 * 60));
+        var minutes = Math.floor((elapsedTime % (1000 * 60 * 60)) / (1000 * 60));
+        var seconds = Math.floor((elapsedTime % (1000 * 60)) / 1000);
+        document.getElementById('hours').innerText = pad(hours);
+        document.getElementById('minutes').innerText = pad(minutes);
+        document.getElementById('seconds').innerText = pad(seconds);
     }
 
     function pad(num) {
-    return (num < 10 ? '0' : '') + num;
+        return (num < 10 ? '0' : '') + num;
     }
     </script>
 
